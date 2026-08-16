@@ -3,8 +3,6 @@
 `svelte-drawer-sheet` is an unstyled and accessible drawer for Svelte 5. It supports gestures, snap
 points, nested drawers, detached triggers, custom elements, and an optional virtual keyboard.
 
-> The API can change before version `1.0`.
-
 [Base UI's Drawer](https://base-ui.com/react/components/drawer) inspired this library. The
 `svelte-drawer-sheet` project has no maintenance connection to Base UI. The library does not provide a
 compatibility layer. See the
@@ -23,7 +21,7 @@ npm install svelte-drawer-sheet
 yarn add svelte-drawer-sheet
 ```
 
-Use Svelte version `5.40.0` or later. Do not use Svelte 6. Use a bundler that supports Svelte.
+Use Svelte version `5.40.0` or a later Svelte 5 release. Use a bundler that supports Svelte.
 
 ## Basic drawer
 

@@ -1,0 +1,12 @@
+engineStrict: true
+strictPeerDependencies: true
+verifyDepsBeforeRun: install
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+packageConfigs:
+  svelte-drawer-sheet:
+    saveExact: true
+
+allowBuilds:
+  esbuild: true

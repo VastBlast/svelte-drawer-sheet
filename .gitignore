@@ -1,0 +1,11 @@
+/references/
+
+node_modules/
+.svelte-kit/
+dist/
+build/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/

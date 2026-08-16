@@ -1,0 +1,9 @@
+.svelte-kit
+dist
+pnpm-lock.yaml
+references
+static
+
+# Agent tooling artifacts
+.agents/
+skills-lock.json

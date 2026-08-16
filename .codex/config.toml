@@ -1,0 +1,12 @@
+[mcp_servers.svelte]
+command = "npx"
+args = ["-y", "@sveltejs/mcp"]
+
+# below added for svelte auto fixer
+[sandbox_workspace_write]
+network_access = true
+
+[features.network_proxy]
+enabled = true
+domains = { "svelte.dev" = "allow" }
+# end of svelte auto fixer

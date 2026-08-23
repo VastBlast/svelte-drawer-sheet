@@ -400,6 +400,31 @@ provider scope.
 `Viewport` sets `--drawer-nesting-depth` to `0` for a top-level root and increments it for every
 nested root, so dynamic stacks do not need per-level z-index classes.
 
+#### Browser history with SvelteKit
+
+Keep routing outside the drawer by binding `open` to typed shallow state. Push an entry when the
+page opens and navigate back when a user gesture or control closes it.
+
+```svelte
+<script lang="ts">
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
+
+	let open = $derived(page.state.drawerOpen === true);
+</script>
+
+<Drawer.Root
+	bind:open
+	onOpenChange={(nextOpen) =>
+		nextOpen ? pushState('', { ...page.state, drawerOpen: true }) : history.back()}
+>
+	<!-- parts -->
+</Drawer.Root>
+```
+
+Declare `drawerOpen` in `App.PageState`. For nested pages, store the active page key and push one
+entry per level so browser Back and Forward unwind and restore the stack.
+
 ## Portals and presence
 
 By default, `Portal` moves content to `document.body`. The `to` prop accepts a selector, a connected

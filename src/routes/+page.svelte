@@ -1,6 +1,13 @@
 <script lang="ts">
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	import * as Drawer from '$lib';
-	import type { DrawerModal, DrawerSnapPoint, DrawerSwipeDirection } from '$lib';
+	import type {
+		DrawerChangeEventDetails,
+		DrawerModal,
+		DrawerSnapPoint,
+		DrawerSwipeDirection
+	} from '$lib';
 	import './demo.css';
 
 	const snapPoints = ['24rem', 0.7, 1] as const satisfies readonly DrawerSnapPoint[];
@@ -45,6 +52,8 @@
 	}[];
 	const pageViews = ['Today', 'This week'] as const;
 	const projectViews = ['Overview', 'Checklist'] as const;
+	type NavigationPage = NonNullable<App.PageState['demoDrawerPage']>;
+	const navigationPages = ['focus', 'project'] as const satisfies readonly NavigationPage[];
 	const sessionDays = ['Today', 'Tomorrow', 'Monday'] as const;
 	const sessionLengths = ['25', '30', '45', '60'] as const;
 
@@ -85,6 +94,29 @@
 	let modalOption = $derived(
 		modalOptions.find((option) => option.value === modal) ?? modalOptions[0]
 	);
+	let activeNavigationPageIndex = $derived(
+		page.state.demoDrawerPage ? navigationPages.indexOf(page.state.demoDrawerPage) : -1
+	);
+	let focusPageOpen = $derived(activeNavigationPageIndex >= 0);
+	let projectPageOpen = $derived(activeNavigationPageIndex >= 1);
+
+	function handleNavigationPageChange(
+		navigationPage: NavigationPage,
+		open: boolean,
+		details: DrawerChangeEventDetails
+	) {
+		const pageIndex = navigationPages.indexOf(navigationPage);
+		if (open) {
+			if (pageIndex !== activeNavigationPageIndex + 1) {
+				details.cancel();
+				return;
+			}
+			pushState('', { ...page.state, demoDrawerPage: navigationPage });
+			return;
+		}
+		if (pageIndex === activeNavigationPageIndex) history.back();
+		else details.cancel();
+	}
 </script>
 
 <svelte:head>
@@ -176,11 +208,11 @@
 
 		<section class="example-section" id="full-screen" aria-labelledby="full-screen-title">
 			<div class="section-heading">
-				<p class="section-index">swipeDirection="right" · nested pages + drawer</p>
+				<p class="section-index">swipeDirection="right" · shallow routing</p>
 				<h2 id="full-screen-title">Full-screen page</h2>
 				<p>
-					Open two page-like drawers, scroll and interact with them, then swipe right or use Back to
-					unwind the stack.
+					Open two page-like drawers, then use swipe back, the page controls, or browser Back and
+					Forward to move through the stack.
 				</p>
 			</div>
 
@@ -193,7 +225,12 @@
 					</div>
 				</div>
 
-				<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
+				<Drawer.Root
+					bind:open={focusPageOpen}
+					swipeDirection="right"
+					swipeBehavior="navigation"
+					onOpenChange={(open, details) => handleNavigationPageChange('focus', open, details)}
+				>
 					<Drawer.Trigger class="button button--primary">Open full-screen page</Drawer.Trigger>
 					<Drawer.Portal>
 						<Drawer.Backdrop class="scrim scrim--navigation" />
@@ -247,7 +284,13 @@
 													</div>
 												</div>
 
-												<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
+												<Drawer.Root
+													bind:open={projectPageOpen}
+													swipeDirection="right"
+													swipeBehavior="navigation"
+													onOpenChange={(open, details) =>
+														handleNavigationPageChange('project', open, details)}
+												>
 													<section
 														class="page-card page-navigation-card"
 														aria-labelledby="project-page-title"

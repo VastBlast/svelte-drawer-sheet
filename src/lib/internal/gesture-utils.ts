@@ -5,9 +5,80 @@ export const AXIS_LOCK_SLOP = 6;
 export const AXIS_LOCK_BIAS = 2;
 export const MAX_RELEASE_SAMPLE_AGE = 80;
 
+const NAVIGATION_MIN_DRAG = 10;
+const NAVIGATION_PROJECTION_TIME = 240;
+const NAVIGATION_SETTLE_DURATION = 380;
+const NAVIGATION_MIN_SETTLE_DURATION = 160;
+const NAVIGATION_MAX_VELOCITY = 3;
+const NAVIGATION_EASING_X1 = 0.18;
+const NAVIGATION_EASING_X2 = 0.24;
+
 export interface Point {
 	readonly x: number;
 	readonly y: number;
+}
+
+export interface NavigationSwipeRelease {
+	readonly dismiss: boolean;
+	/** Multiplier for a 380ms consumer transition. */
+	readonly strength: number;
+	/** A monotonic curve whose initial slope follows velocity toward the chosen destination. */
+	readonly easing: string;
+}
+
+function navigationSettleEasing(
+	targetVelocity: number,
+	remaining: number,
+	duration: number
+): string {
+	const normalizedVelocity = remaining > 0 ? (targetVelocity * duration) / remaining : 0;
+	const y1 = Math.min(1, Math.max(0, normalizedVelocity * NAVIGATION_EASING_X1));
+	return `cubic-bezier(${NAVIGATION_EASING_X1}, ${Number(y1.toFixed(4))}, ${NAVIGATION_EASING_X2}, 1)`;
+}
+
+/** Resolves navigation intent from projected momentum and times only the distance left to settle. */
+export function resolveNavigationSwipeRelease(
+	displacement: number,
+	size: number,
+	velocity: number
+): NavigationSwipeRelease {
+	if (!Number.isFinite(size) || size <= 0) {
+		return {
+			dismiss: false,
+			strength: 1,
+			easing: navigationSettleEasing(0, 1, NAVIGATION_SETTLE_DURATION)
+		};
+	}
+
+	const current = Math.min(size, Math.max(0, Number.isFinite(displacement) ? displacement : 0));
+	const resolvedVelocity = Math.min(
+		NAVIGATION_MAX_VELOCITY,
+		Math.max(-NAVIGATION_MAX_VELOCITY, Number.isFinite(velocity) ? velocity : 0)
+	);
+	const projected = current + resolvedVelocity * NAVIGATION_PROJECTION_TIME;
+	const dismiss = current >= NAVIGATION_MIN_DRAG && projected >= size * 0.5;
+	const remaining = dismiss ? size - current : current;
+	const targetVelocity = dismiss ? Math.max(0, resolvedVelocity) : Math.max(0, -resolvedVelocity);
+	if (remaining <= 0) {
+		return {
+			dismiss,
+			strength: NAVIGATION_MIN_SETTLE_DURATION / NAVIGATION_SETTLE_DURATION,
+			easing: navigationSettleEasing(targetVelocity, remaining, NAVIGATION_MIN_SETTLE_DURATION)
+		};
+	}
+
+	const distanceDuration = NAVIGATION_SETTLE_DURATION * Math.sqrt(remaining / size);
+	const velocityDuration = targetVelocity > 0 ? (remaining / targetVelocity) * 1.35 : Infinity;
+	const duration = Math.min(
+		NAVIGATION_SETTLE_DURATION,
+		Math.max(NAVIGATION_MIN_SETTLE_DURATION, Math.min(distanceDuration, velocityDuration))
+	);
+
+	return {
+		dismiss,
+		strength: duration / NAVIGATION_SETTLE_DURATION,
+		easing: navigationSettleEasing(targetVelocity, remaining, duration)
+	};
 }
 
 export function eventTime(event: Event): number {

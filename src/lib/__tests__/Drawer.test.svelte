@@ -6,7 +6,9 @@
 		DrawerInteractionType,
 		DrawerModal,
 		DrawerRootActions,
-		DrawerSnapPoint
+		DrawerSnapPoint,
+		DrawerSwipeBehavior,
+		DrawerSwipeDirection
 	} from '../types.js';
 
 	let {
@@ -17,6 +19,8 @@
 		retainOnClose = false,
 		scrollableContent = false,
 		suppressAutoFocus = false,
+		swipeBehavior = 'drawer',
+		swipeDirection = 'down',
 		withBackdrop = true,
 		withSnapPoints = true
 	}: {
@@ -27,6 +31,8 @@
 		retainOnClose?: boolean;
 		scrollableContent?: boolean;
 		suppressAutoFocus?: boolean;
+		swipeBehavior?: DrawerSwipeBehavior;
+		swipeDirection?: DrawerSwipeDirection;
 		withBackdrop?: boolean;
 		withSnapPoints?: boolean;
 	} = $props();
@@ -80,6 +86,8 @@
 	onOpenChange={handleOpenChange}
 	onOpenChangeComplete={handleOpenChangeComplete}
 	{modal}
+	{swipeBehavior}
+	{swipeDirection}
 >
 	<Drawer.Trigger data-testid="trigger">Open drawer</Drawer.Trigger>
 	<Drawer.Trigger data-testid="secondary-trigger">Launch alternate panel</Drawer.Trigger>
@@ -99,7 +107,7 @@
 		>
 			<Drawer.Popup
 				data-testid="popup"
-				style="height: 360px; pointer-events: auto;"
+				style="width: 400px; height: 360px; pointer-events: auto;"
 				initialFocus={suppressAutoFocus
 					? false
 					: captureFocusMethods

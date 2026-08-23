@@ -4,6 +4,7 @@ import type { DrawerHandle } from './internal/handle.svelte.js';
 import type { SnapPoint } from './internal/snap-points.js';
 
 export type DrawerSwipeDirection = 'up' | 'down' | 'left' | 'right';
+export type DrawerSwipeBehavior = 'drawer' | 'navigation';
 export type DrawerModal = boolean | 'trap-focus';
 export type DrawerInteractionType = 'mouse' | 'touch' | 'pen' | 'keyboard' | '';
 export type DrawerChangeEventReason =
@@ -50,6 +51,11 @@ export interface DrawerRootProps<Payload = unknown> {
 	modal?: DrawerModal;
 	disablePointerDismissal?: boolean;
 	swipeDirection?: DrawerSwipeDirection;
+	/**
+	 * `navigation` adds momentum-projected, reversal-aware release behavior for full-screen
+	 * horizontal navigation. Vertical directions keep the default drawer behavior.
+	 */
+	swipeBehavior?: DrawerSwipeBehavior;
 	snapPoints?: readonly SnapPoint[];
 	defaultSnapPoint?: SnapPoint | null;
 	snapPoint?: SnapPoint | null;
@@ -155,6 +161,7 @@ export interface DrawerPopupState extends DrawerPresenceState {
 	readonly nestedDrawerOpen: boolean;
 	readonly nestedDrawerSwiping: boolean;
 	readonly swipeDirection: DrawerSwipeDirection;
+	readonly swipeBehavior: DrawerSwipeBehavior;
 	readonly swiping: boolean;
 }
 

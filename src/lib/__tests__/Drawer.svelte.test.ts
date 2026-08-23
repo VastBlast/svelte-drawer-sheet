@@ -2,6 +2,7 @@ import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import DrawerTest from './Drawer.test.svelte';
+import NavigationProviderTest from './NavigationProvider.test.svelte';
 import NestedDrawerTest from './NestedDrawer.test.svelte';
 
 describe('Drawer', () => {
@@ -572,6 +573,88 @@ describe('Drawer', () => {
 
 		await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
 		await expect.element(page.getByTestId('reason')).toHaveTextContent('swipe');
+	});
+
+	it('uses content-wide projected release behavior for horizontal navigation', async () => {
+		render(DrawerTest, {
+			defaultOpen: true,
+			swipeBehavior: 'navigation',
+			swipeDirection: 'right',
+			withSnapPoints: false
+		});
+		const popup = page.getByTestId('popup').element();
+		if (!(popup instanceof HTMLElement)) throw new TypeError('Expected an HTML popup');
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+		await expect
+			.element(page.getByTestId('popup'))
+			.toHaveAttribute('data-swipe-behavior', 'navigation');
+
+		dispatchTouch(popup, 'touchstart', 200, 100);
+		dispatchTouch(popup, 'touchmove', 220, 100);
+		dispatchTouch(popup, 'touchmove', 255, 100);
+		expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('35px');
+		dispatchTouch(popup, 'touchend', 255, 100);
+
+		await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+		await expect.element(page.getByTestId('reason')).toHaveTextContent('swipe');
+	});
+
+	it('keeps navigation behavior out of vertical drawers', async () => {
+		render(DrawerTest, { defaultOpen: true, swipeBehavior: 'navigation' });
+
+		await expect
+			.element(page.getByTestId('popup'))
+			.toHaveAttribute('data-swipe-behavior', 'drawer');
+		await page.getByRole('button', { name: 'Close drawer' }).click();
+	});
+
+	it('redirects a navigation swipe back to open and clears its temporary settle state', async () => {
+		render(DrawerTest, {
+			defaultOpen: true,
+			swipeBehavior: 'navigation',
+			swipeDirection: 'right',
+			withSnapPoints: false
+		});
+		const popup = page.getByTestId('popup').element();
+		if (!(popup instanceof HTMLElement)) throw new TypeError('Expected an HTML popup');
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+		dispatchTouch(popup, 'touchstart', 180, 100);
+		dispatchTouch(popup, 'touchmove', 200, 100);
+		dispatchTouch(popup, 'touchmove', 330, 100);
+		dispatchTouch(popup, 'touchmove', 240, 100);
+		dispatchTouch(popup, 'touchend', 240, 100);
+
+		expect(popup.style.getPropertyValue('--drawer-swipe-movement-x')).toBe('0px');
+		expect(popup.style.getPropertyValue('--drawer-swipe-easing')).toMatch(/^cubic-bezier\(/);
+		await expect.element(page.getByRole('dialog')).toBeInTheDocument();
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+		expect(popup.style.getPropertyValue('--drawer-swipe-strength')).toBe('1');
+		expect(popup.style.getPropertyValue('--drawer-swipe-easing')).toBe('');
+
+		await page.getByRole('button', { name: 'Close drawer' }).click();
+	});
+
+	it('coordinates navigation settle state with a provider indent', async () => {
+		render(NavigationProviderTest);
+		const popup = page.getByTestId('popup').element();
+		const indent = page.getByTestId('indent').element();
+		if (!(popup instanceof HTMLElement) || !(indent instanceof HTMLElement)) {
+			throw new TypeError('Expected navigation elements');
+		}
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+		expect(indent.getAttribute('data-swipe-behavior')).toBe('navigation');
+		dispatchTouch(popup, 'touchstart', 180, 100);
+		dispatchTouch(popup, 'touchmove', 200, 100);
+		dispatchTouch(popup, 'touchmove', 280, 100);
+		expect(indent.hasAttribute('data-swiping')).toBe(true);
+		expect(Number(indent.style.getPropertyValue('--drawer-swipe-progress'))).toBeCloseTo(0.2);
+
+		dispatchTouch(popup, 'touchmove', 230, 100);
+		dispatchTouch(popup, 'touchend', 230, 100);
+		expect(indent.style.getPropertyValue('--drawer-swipe-easing')).toMatch(/^cubic-bezier\(/);
+		await expect.element(page.getByRole('dialog')).toBeInTheDocument();
 	});
 
 	it('clears imperative release styles when reopening interrupts a swipe dismissal', async () => {

@@ -542,6 +542,31 @@ a:focus-visible {
 	transition-duration: calc(400ms * var(--drawer-swipe-strength, 1));
 }
 
+.scrim.scrim--navigation {
+	--scrim-opacity: 0.1;
+	transition: opacity calc(380ms * var(--drawer-swipe-strength, 1))
+		var(--drawer-swipe-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.navigation-underlay {
+	min-height: 100dvh;
+	transition: transform calc(380ms * var(--drawer-swipe-strength, 1))
+		var(--drawer-swipe-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.navigation-underlay[data-active][data-swipe-behavior='navigation'] {
+	--navigation-underlay-offset: clamp(-8rem, -22vw, -4rem);
+	transform: translate3d(
+		calc(var(--navigation-underlay-offset) * (1 - var(--drawer-swipe-progress, 0))),
+		0,
+		0
+	);
+}
+
+.navigation-underlay[data-swiping] {
+	transition: none;
+}
+
 .sheet-viewport {
 	position: fixed;
 	inset: 0;
@@ -663,8 +688,13 @@ a:focus-visible {
 	background: #f7f7f9;
 	border: 0;
 	border-radius: 0;
-	box-shadow: none;
+	box-shadow: -0.65rem 0 1.75rem rgb(17 17 20 / 16%);
 	touch-action: pan-y pinch-zoom;
+}
+
+.sheet.sheet--page[data-swipe-behavior='navigation'] {
+	transition: transform calc(380ms * var(--drawer-swipe-strength, 1))
+		var(--drawer-swipe-easing, cubic-bezier(0.32, 0.72, 0, 1));
 }
 
 .sheet.sheet--page::after {
@@ -1633,6 +1663,7 @@ a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
 	.button,
 	.scrim,
+	.navigation-underlay,
 	.sheet,
 	.sheet::after,
 	.sheet-body,

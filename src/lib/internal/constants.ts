@@ -11,6 +11,7 @@ export const CSS_VAR = {
 	swipeMovementY: '--drawer-swipe-movement-y',
 	swipeProgress: '--drawer-swipe-progress',
 	swipeStrength: '--drawer-swipe-strength',
+	swipeEasing: '--drawer-swipe-easing',
 	snapPointOffset: '--drawer-snap-point-offset',
 	height: '--drawer-height',
 	frontmostHeight: '--drawer-frontmost-height',

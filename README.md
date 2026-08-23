@@ -323,6 +323,53 @@ parts.
 Add `data-drawer-swipe-ignore` to a region that must keep native gestures. `Content` identifies the
 scroll region. A drawer gesture starts only when the content reaches its scroll boundary.
 
+### Navigation swipe behavior
+
+Use `swipeBehavior="navigation"` for a full-screen horizontal view that represents the next level
+in a navigation hierarchy.
+
+```svelte
+<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
+	<!-- trigger, full-screen popup, and other parts -->
+</Drawer.Root>
+```
+
+Navigation behavior can start anywhere on the popup. It projects recent release velocity to resolve
+intent, respects a reversal at release, scales the settle duration to the distance left, and emits
+a velocity-matched settle curve. It applies only to horizontal drawers. Vertical drawers keep the
+default `drawer` behavior, including when `navigation` is supplied. The default behavior is
+unchanged.
+
+Use a 380ms base transition with the emitted strength and easing properties. This preserves motion
+continuity when the finger releases.
+
+```css
+.navigation-popup[data-swipe-behavior='navigation'] {
+	transition: transform calc(380ms * var(--drawer-swipe-strength, 1))
+		var(--drawer-swipe-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.navigation-popup[data-swiping] {
+	transition: none;
+}
+```
+
+For a page-stack transition, put the page and navigation root in a `Provider`, wrap the page with
+`Indent`, and use the same timing properties on both layers. `Indent` receives dismissal progress
+and settle state without changing presentation on its own.
+
+```css
+.navigation-underlay[data-active][data-swipe-behavior='navigation'] {
+	transform: translateX(calc(-22vw * (1 - var(--drawer-swipe-progress, 0))));
+	transition: transform calc(380ms * var(--drawer-swipe-strength, 1))
+		var(--drawer-swipe-easing, cubic-bezier(0.32, 0.72, 0, 1));
+}
+
+.navigation-underlay[data-swiping] {
+	transition: none;
+}
+```
+
 ## Portals and presence
 
 By default, `Portal` moves content to `document.body`. The `to` prop accepts a selector, a connected
@@ -427,16 +474,17 @@ These attributes and variables are the stable style API. Do not use other implem
 
 ### Data attributes
 
-| Part                         | Attributes                                                                                                                                                                                                                    |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Trigger`                    | `data-popup-open`, `data-disabled`                                                                                                                                                                                            |
-| `Close`                      | `data-disabled`                                                                                                                                                                                                               |
-| `Backdrop`                   | `data-open`, `data-closed`, `data-swiping`, `data-swipe-dismiss`, `data-starting-style`, `data-ending-style`                                                                                                                  |
-| `Viewport`                   | `data-open`, `data-closed`, `data-nested`, `data-nested-drawer-open`                                                                                                                                                          |
-| `Popup`                      | `data-open`, `data-closed`, `data-expanded`, `data-nested`, `data-nested-drawer-open`, `data-nested-drawer-swiping`, `data-swipe-direction`, `data-swipe-dismiss`, `data-swiping`, `data-starting-style`, `data-ending-style` |
-| `Content`                    | `data-drawer-content`                                                                                                                                                                                                         |
-| `SwipeArea`                  | `data-open`, `data-closed`, `data-disabled`, `data-swipe-direction`, `data-swiping`                                                                                                                                           |
-| `Indent`, `IndentBackground` | `data-active`, `data-inactive`                                                                                                                                                                                                |
+| Part               | Attributes                                                                                                                                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Trigger`          | `data-popup-open`, `data-disabled`                                                                                                                                                                                                                   |
+| `Close`            | `data-disabled`                                                                                                                                                                                                                                      |
+| `Backdrop`         | `data-open`, `data-closed`, `data-swiping`, `data-swipe-dismiss`, `data-starting-style`, `data-ending-style`                                                                                                                                         |
+| `Viewport`         | `data-open`, `data-closed`, `data-nested`, `data-nested-drawer-open`                                                                                                                                                                                 |
+| `Popup`            | `data-open`, `data-closed`, `data-expanded`, `data-nested`, `data-nested-drawer-open`, `data-nested-drawer-swiping`, `data-swipe-behavior`, `data-swipe-direction`, `data-swipe-dismiss`, `data-swiping`, `data-starting-style`, `data-ending-style` |
+| `Content`          | `data-drawer-content`                                                                                                                                                                                                                                |
+| `SwipeArea`        | `data-open`, `data-closed`, `data-disabled`, `data-swipe-direction`, `data-swiping`                                                                                                                                                                  |
+| `Indent`           | `data-active`, `data-inactive`, `data-swipe-behavior`, `data-swiping`                                                                                                                                                                                |
+| `IndentBackground` | `data-active`, `data-inactive`                                                                                                                                                                                                                       |
 
 ### CSS custom properties
 
@@ -445,7 +493,8 @@ These attributes and variables are the stable style API. Do not use other implem
 | `--drawer-swipe-movement-x`  | `Popup`                       | Current horizontal drag distance                                                 |
 | `--drawer-swipe-movement-y`  | `Popup`                       | Current vertical drag distance                                                   |
 | `--drawer-swipe-progress`    | `Popup`, `Backdrop`, `Indent` | Nested drawer progress on Popup. Other elements show snap or dismissal progress. |
-| `--drawer-swipe-strength`    | `Popup`, `Backdrop`           | Release duration multiplier from `0.1` through `1`                               |
+| `--drawer-swipe-strength`    | `Popup`, `Backdrop`, `Indent` | Settle duration multiplier from `0.1` through `1`                                |
+| `--drawer-swipe-easing`      | `Popup`, `Backdrop`, `Indent` | Velocity-matched navigation settle curve                                         |
 | `--drawer-snap-point-offset` | `Popup`                       | Pixel offset of the active snap point                                            |
 | `--drawer-height`            | `Popup`, `Backdrop`, `Indent` | `auto` at rest. Height in pixels during nesting or exit.                         |
 | `--drawer-frontmost-height`  | `Popup`                       | Height of the frontmost nested drawer                                            |

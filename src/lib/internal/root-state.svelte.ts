@@ -5,6 +5,7 @@ import type {
 	DrawerModal,
 	DrawerRootActions,
 	DrawerSnapPointChangeEventDetails,
+	DrawerSwipeBehavior,
 	DrawerSwipeDirection
 } from '../types.js';
 import { CSS_VAR, isVertical } from './constants.js';
@@ -22,6 +23,7 @@ import {
 	type ResolvedSnapPoint,
 	type SnapPoint
 } from './snap-points.js';
+import { waitForAnimations } from './presence.js';
 
 interface DrawerRootStateOptions {
 	getOpen: () => boolean;
@@ -29,6 +31,7 @@ interface DrawerRootStateOptions {
 	getModal: () => DrawerModal;
 	getDisablePointerDismissal: () => boolean;
 	getSwipeDirection: () => DrawerSwipeDirection;
+	getSwipeBehavior: () => DrawerSwipeBehavior;
 	getSnapPoints: () => readonly SnapPoint[] | undefined;
 	getSnapPoint: () => SnapPoint | null | undefined;
 	setSnapPoint: (snapPoint: SnapPoint | null) => void;
@@ -110,6 +113,7 @@ export class DrawerRootState<Payload = unknown> {
 	swiping = $state(false);
 	swipeDismissed = $state(false);
 	swipeStrength = $state(1);
+	swipeEasing = $state('');
 	swipeAreaActive = $state(false);
 	outsideDismissSuppressed = false;
 	preventUnmount = $state(false);
@@ -173,6 +177,7 @@ export class DrawerRootState<Payload = unknown> {
 	#measurePopup: (() => void) | null = null;
 	#popupMeasureFrame = 0;
 	#nestedVisualFrame = 0;
+	#swipeSettleCleanup: (() => void) | null = null;
 	#resolvedSnapPoints = $derived.by<ResolvedSnapPoint[]>(() => {
 		if (!isVertical(this.swipeDirection)) return [];
 		return resolveSnapPoints(this.snapPoints ?? [], {
@@ -256,6 +261,11 @@ export class DrawerRootState<Payload = unknown> {
 
 	get swipeDirection(): DrawerSwipeDirection {
 		return this.#options.getSwipeDirection();
+	}
+
+	get swipeBehavior(): DrawerSwipeBehavior {
+		const behavior = this.#options.getSwipeBehavior();
+		return behavior === 'navigation' && isVertical(this.swipeDirection) ? 'drawer' : behavior;
 	}
 
 	get snapPoints(): readonly SnapPoint[] | undefined {
@@ -587,6 +597,7 @@ export class DrawerRootState<Payload = unknown> {
 			};
 			if (this.popup) this.popup.style.transition = 'none';
 			if (this.backdrop) this.backdrop.style.transition = 'none';
+			this.#clearSwipeSettle();
 		} else if (this.#transitionSnapshot) {
 			const snapshot = this.#transitionSnapshot;
 			if (snapshot.popup?.isConnected) snapshot.popup.style.transition = snapshot.popupTransition;
@@ -599,6 +610,7 @@ export class DrawerRootState<Payload = unknown> {
 		this.swiping = value;
 		this.popup?.toggleAttribute('data-swiping', value);
 		this.backdrop?.toggleAttribute('data-swiping', value);
+		this.#publishProviderVisualState();
 	}
 
 	/** `retainHeight` keeps the height variables published through zero-progress gesture frames. */
@@ -619,12 +631,7 @@ export class DrawerRootState<Payload = unknown> {
 				this.backdrop.style.removeProperty(CSS_VAR.height);
 			}
 		}
-		if (!this.parent) {
-			this.provider?.visualState.set(this, {
-				swipeProgress: resolvedProgress,
-				frontmostHeight: height
-			});
-		}
+		this.#publishProviderVisualState();
 		this.parent?.setNestedProgress(this, resolvedProgress);
 	}
 
@@ -654,12 +661,7 @@ export class DrawerRootState<Payload = unknown> {
 				this.backdrop.style.removeProperty(CSS_VAR.height);
 			}
 		}
-		if (!this.parent) {
-			this.provider?.visualState.set(this, {
-				swipeProgress: ownProgress,
-				frontmostHeight: ownProgress > 0 ? this.frontmostHeight : 0
-			});
-		}
+		this.#publishProviderVisualState();
 		// A nested drawer only reports progress while it is actively moving. Its resting
 		// snap position must not visually indent the parent drawer.
 		this.parent?.setNestedProgress(this, 0);
@@ -669,30 +671,87 @@ export class DrawerRootState<Payload = unknown> {
 		velocity: number,
 		displacement: number,
 		size: number,
-		baseOffset = this.activeSnapPointOffset
+		baseOffset = this.activeSnapPointOffset,
+		strength?: number,
+		easing?: string
 	): void {
-		const currentOffset = Math.min(size, Math.max(0, (baseOffset ?? 0) + displacement));
-		const remainingDistance = Math.max(0, size - currentOffset);
-		if (size <= 0 || velocity <= 0.2 || remainingDistance <= 0) {
-			this.swipeStrength = 1;
-		} else {
-			const duration = Math.min(360, Math.max(80, remainingDistance / Math.min(4, velocity)));
-			this.swipeStrength = 0.1 + ((duration - 80) / 280) * 0.9;
+		this.#cancelSwipeSettleCleanup();
+		if (strength === undefined) {
+			const currentOffset = Math.min(size, Math.max(0, (baseOffset ?? 0) + displacement));
+			const remainingDistance = Math.max(0, size - currentOffset);
+			if (size <= 0 || velocity <= 0.2 || remainingDistance <= 0) {
+				strength = 1;
+			} else {
+				const duration = Math.min(360, Math.max(80, remainingDistance / Math.min(4, velocity)));
+				strength = 0.1 + ((duration - 80) / 280) * 0.9;
+			}
 		}
-		this.popup?.style.setProperty(CSS_VAR.swipeStrength, `${this.swipeStrength}`);
-		this.backdrop?.style.setProperty(CSS_VAR.swipeStrength, `${this.swipeStrength}`);
+		this.#setSwipeSettle(strength, easing);
 		this.swipeDismissed = true;
 		this.popup?.setAttribute('data-swipe-dismiss', '');
 		this.backdrop?.setAttribute('data-swipe-dismiss', '');
+		this.#publishProviderVisualState();
+	}
+
+	settleDrag(strength: number, easing?: string): void {
+		this.#clearSwipeSettle();
+		this.#setSwipeSettle(strength, easing);
+		this.resetDrag();
+
+		let completed = false;
+		const cleanup = waitForAnimations(this.popup, () => {
+			completed = true;
+			if (this.open && !this.swiping && !this.swipeDismissed) this.#clearSwipeSettle();
+		});
+		if (!completed) this.#swipeSettleCleanup = cleanup;
 	}
 
 	clearSwipeRelease(): void {
+		this.#cancelSwipeSettleCleanup();
 		this.swipeDismissed = false;
-		this.swipeStrength = 1;
 		this.popup?.removeAttribute('data-swipe-dismiss');
 		this.backdrop?.removeAttribute('data-swipe-dismiss');
-		this.popup?.style.setProperty(CSS_VAR.swipeStrength, '1');
-		this.backdrop?.style.setProperty(CSS_VAR.swipeStrength, '1');
+		this.#setSwipeSettle(1);
+		this.#publishProviderVisualState();
+	}
+
+	#setSwipeSettle(value: number, easing = ''): void {
+		const resolved = Number.isFinite(value) ? Math.min(1, Math.max(0.1, value)) : 1;
+		if (resolved === this.swipeStrength && easing === this.swipeEasing) return;
+		this.swipeStrength = resolved;
+		this.swipeEasing = easing;
+		this.popup?.style.setProperty(CSS_VAR.swipeStrength, `${this.swipeStrength}`);
+		this.backdrop?.style.setProperty(CSS_VAR.swipeStrength, `${this.swipeStrength}`);
+		if (easing) {
+			this.popup?.style.setProperty(CSS_VAR.swipeEasing, easing);
+			this.backdrop?.style.setProperty(CSS_VAR.swipeEasing, easing);
+		} else {
+			this.popup?.style.removeProperty(CSS_VAR.swipeEasing);
+			this.backdrop?.style.removeProperty(CSS_VAR.swipeEasing);
+		}
+	}
+
+	#cancelSwipeSettleCleanup(): void {
+		this.#swipeSettleCleanup?.();
+		this.#swipeSettleCleanup = null;
+	}
+
+	#clearSwipeSettle(): void {
+		this.#cancelSwipeSettleCleanup();
+		if (!this.swipeDismissed) this.#setSwipeSettle(1);
+		this.#publishProviderVisualState();
+	}
+
+	#publishProviderVisualState(): void {
+		if (this.parent) return;
+		this.provider?.visualState.set(this, {
+			swipeProgress: this.backdropSwipeProgress,
+			frontmostHeight: this.backdropHeight,
+			swiping: this.swiping,
+			swipeStrength: this.swipeStrength,
+			swipeEasing: this.swipeEasing,
+			swipeBehavior: this.swipeBehavior
+		});
 	}
 
 	attachPopup = (element: HTMLElement): (() => void) => {
@@ -731,6 +790,7 @@ export class DrawerRootState<Payload = unknown> {
 	};
 
 	destroy(): void {
+		this.#cancelSwipeSettleCleanup();
 		this.#destroyed = true;
 	}
 

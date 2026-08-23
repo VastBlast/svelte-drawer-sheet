@@ -1,4 +1,4 @@
-import type { DrawerSwipeDirection } from '../types.js';
+import type { DrawerSwipeBehavior, DrawerSwipeDirection } from '../types.js';
 import { ATTR, getDisplacement, isVertical } from './constants.js';
 import {
 	deepestActiveElement,
@@ -17,6 +17,7 @@ import {
 	eventTime,
 	movementFor,
 	renderedDirectionalOffset,
+	resolveNavigationSwipeRelease,
 	safePointerCapture,
 	touchPoint,
 	touchPointFromList,
@@ -34,6 +35,7 @@ const IGNORE_TOUCH_SELECTOR = `[${ATTR.swipeIgnore}],[${ATTR.baseSwipeIgnore}]`;
 interface GestureSession {
 	readonly source: 'pointer' | 'touch';
 	readonly direction: DrawerSwipeDirection;
+	readonly behavior: DrawerSwipeBehavior;
 	readonly pointerId?: number;
 	readonly touchId?: number;
 	start: Point;
@@ -147,22 +149,27 @@ export function attachDismissGesture(
 		ids: Pick<GestureSession, 'pointerId' | 'touchId'> = {}
 	): void {
 		if (session || !state.open || state.nestedInteractionOpen || !state.popup) return;
+		const direction = state.swipeDirection;
+		const behavior = state.swipeBehavior;
 		const path = eventPathElements(event);
 		const target = path[0] ?? (isElement(event.target) ? event.target : null);
 		if (!path.includes(state.popup) && !(target && state.popup.contains(target))) return;
 		if (source === 'pointer') {
-			if (pathMatches(path, IGNORE_POINTER_SELECTOR) || pathMatches(path, `[${ATTR.content}]`)) {
+			if (
+				pathMatches(path, IGNORE_POINTER_SELECTOR) ||
+				(behavior === 'drawer' && pathMatches(path, `[${ATTR.content}]`))
+			) {
 				return;
 			}
 		} else if (shouldIgnoreTouch(path, element)) {
 			return;
 		}
 
-		const direction = state.swipeDirection;
 		const axis = axisFor(direction);
 		session = {
 			source,
 			direction,
+			behavior,
 			...ids,
 			start: point,
 			last: point,
@@ -237,7 +244,10 @@ export function attachDismissGesture(
 
 		const displacement = getDisplacement(direction, deltaX, deltaY);
 		const now = eventTime(event);
-		const sampleDuration = Math.max(16, now - session.lastTime);
+		const sampleDuration = Math.max(
+			session.behavior === 'navigation' ? 4 : 16,
+			now - session.lastTime
+		);
 		session.velocityX = (point.x - session.last.x) / sampleDuration;
 		session.velocityY = (point.y - session.last.y) / sampleDuration;
 		session.last = point;
@@ -326,7 +336,22 @@ export function attachDismissGesture(
 
 		const hasSnapPoints = state.resolvedSnapPoints.length > 0 && isVertical(direction);
 		let resolvedReleaseVelocity = averageVelocity;
-		if (hasSnapPoints) {
+		let navigationStrength: number | undefined;
+		let navigationEasing: string | undefined;
+		if (finished.behavior === 'navigation') {
+			resolvedReleaseVelocity = releaseVelocity;
+			const release = resolveNavigationSwipeRelease(
+				displacement,
+				finished.drawerSize,
+				releaseVelocity
+			);
+			navigationStrength = release.strength;
+			navigationEasing = release.easing;
+			if (!release.dismiss) {
+				state.settleDrag(release.strength, release.easing);
+				return;
+			}
+		} else if (hasSnapPoints) {
 			resolvedReleaseVelocity = releaseVelocity;
 			if (
 				Math.abs(displacement) >= MIN_SWIPE &&
@@ -374,7 +399,9 @@ export function attachDismissGesture(
 			resolvedReleaseVelocity,
 			displacement,
 			finished.drawerSize,
-			finished.baseOffset
+			finished.baseOffset,
+			navigationStrength,
+			navigationEasing
 		);
 		const stagedSnapClose = hasSnapPoints
 			? state.requestSnapPoint(null, createChangeEventDetails('swipe', event, { trigger: element }))
@@ -388,7 +415,8 @@ export function attachDismissGesture(
 				);
 			}
 			state.clearSwipeRelease();
-			state.resetDrag();
+			if (navigationStrength === undefined) state.resetDrag();
+			else state.settleDrag(navigationStrength, navigationEasing);
 			return;
 		}
 
@@ -402,7 +430,8 @@ export function attachDismissGesture(
 					);
 				}
 				state.clearSwipeRelease();
-				state.resetDrag();
+				if (navigationStrength === undefined) state.resetDrag();
+				else state.settleDrag(navigationStrength, navigationEasing);
 			};
 			const view = element.ownerDocument.defaultView;
 			if (view?.requestAnimationFrame) view.requestAnimationFrame(restore);

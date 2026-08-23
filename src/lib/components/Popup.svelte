@@ -90,6 +90,7 @@
 		nestedDrawerOpen: root.nestedOpenCount > 0,
 		nestedDrawerSwiping: root.nestedSwiping,
 		swipeDirection: root.swipeDirection,
+		swipeBehavior: root.swipeBehavior,
 		swiping: root.swiping
 	});
 
@@ -369,6 +370,7 @@
 				`${CSS_VAR.frontmostHeight}: ${root.frontmostHeight || 0}px`,
 				`${CSS_VAR.nestedDrawers}: ${root.nestedVisualCount}`,
 				`${CSS_VAR.swipeStrength}: ${root.swipeStrength}`,
+				root.swipeEasing ? `${CSS_VAR.swipeEasing}: ${root.swipeEasing}` : undefined,
 				root.swiping ? 'transition: none' : undefined,
 				root.nestedInteractionOpen ? 'pointer-events: none !important' : undefined
 			),
@@ -388,6 +390,7 @@
 			'data-nested-drawer-open': root.nestedVisualCount > 0 ? '' : undefined,
 			'data-nested-drawer-swiping': root.nestedSwiping ? '' : undefined,
 			'data-swipe-direction': root.swipeDirection,
+			'data-swipe-behavior': root.swipeBehavior,
 			'data-swipe-dismiss': root.swipeDismissed ? '' : undefined,
 			'data-swiping': root.swiping ? '' : undefined,
 			[attachmentKey]: attach

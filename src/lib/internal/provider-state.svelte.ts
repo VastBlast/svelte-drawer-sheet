@@ -1,10 +1,25 @@
+import type { DrawerSwipeBehavior } from '../types.js';
+
 interface DrawerVisualState {
 	readonly swipeProgress: number;
 	readonly frontmostHeight: number;
+	readonly swiping: boolean;
+	readonly swipeStrength: number;
+	readonly swipeEasing: string;
+	readonly swipeBehavior: DrawerSwipeBehavior;
 }
 
+const EMPTY_VISUAL_STATE: DrawerVisualState = {
+	swipeProgress: 0,
+	frontmostHeight: 0,
+	swiping: false,
+	swipeStrength: 1,
+	swipeEasing: '',
+	swipeBehavior: 'drawer'
+};
+
 export class DrawerVisualStateStore {
-	#state: DrawerVisualState = { swipeProgress: 0, frontmostHeight: 0 };
+	#state: DrawerVisualState = EMPTY_VISUAL_STATE;
 	// Keep each root's last value so removing the frontmost drawer can reveal the previous one.
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	#states = new Map<object, DrawerVisualState>();
@@ -12,15 +27,19 @@ export class DrawerVisualStateStore {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	#listeners = new Set<(state: DrawerVisualState) => void>();
 
-	set(owner: object, next: Partial<DrawerVisualState>): void {
-		const swipeProgress = Number.isFinite(next.swipeProgress)
-			? (next.swipeProgress ?? this.#state.swipeProgress)
-			: 0;
-		const frontmostHeight = Number.isFinite(next.frontmostHeight)
-			? (next.frontmostHeight ?? this.#state.frontmostHeight)
-			: 0;
+	set(owner: object, next: DrawerVisualState): void {
+		const swipeProgress = Number.isFinite(next.swipeProgress) ? next.swipeProgress : 0;
+		const frontmostHeight = Number.isFinite(next.frontmostHeight) ? next.frontmostHeight : 0;
+		const swipeStrength = Number.isFinite(next.swipeStrength) ? next.swipeStrength : 1;
 
-		const resolved = { swipeProgress, frontmostHeight };
+		const resolved = {
+			swipeProgress,
+			frontmostHeight,
+			swiping: next.swiping,
+			swipeStrength,
+			swipeEasing: next.swipeEasing,
+			swipeBehavior: next.swipeBehavior
+		};
 		// Map.set does not change insertion order for an existing key; promote the latest writer.
 		this.#states.delete(owner);
 		this.#states.set(owner, resolved);
@@ -29,13 +48,17 @@ export class DrawerVisualStateStore {
 
 	remove(owner: object): void {
 		if (!this.#states.delete(owner)) return;
-		this.#publish([...this.#states.values()].at(-1) ?? { swipeProgress: 0, frontmostHeight: 0 });
+		this.#publish([...this.#states.values()].at(-1) ?? EMPTY_VISUAL_STATE);
 	}
 
 	#publish(next: DrawerVisualState): void {
 		if (
 			next.swipeProgress === this.#state.swipeProgress &&
-			next.frontmostHeight === this.#state.frontmostHeight
+			next.frontmostHeight === this.#state.frontmostHeight &&
+			next.swiping === this.#state.swiping &&
+			next.swipeStrength === this.#state.swipeStrength &&
+			next.swipeEasing === this.#state.swipeEasing &&
+			next.swipeBehavior === this.#state.swipeBehavior
 		) {
 			return;
 		}

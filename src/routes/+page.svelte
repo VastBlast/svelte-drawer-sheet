@@ -191,10 +191,10 @@
 					</div>
 				</div>
 
-				<Drawer.Root swipeDirection="right">
+				<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
 					<Drawer.Trigger class="button button--primary">Open full-screen page</Drawer.Trigger>
 					<Drawer.Portal>
-						<Drawer.Backdrop class="scrim" />
+						<Drawer.Backdrop class="scrim scrim--navigation" />
 						<Drawer.Viewport class="sheet-viewport sheet-viewport--right">
 							<Drawer.Popup class="sheet sheet--page">
 								<header class="page-drawer-header">

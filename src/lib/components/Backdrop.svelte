@@ -52,6 +52,7 @@
 			rest.style,
 			`${CSS_VAR.swipeProgress}: ${root.backdropSwipeProgress}`,
 			`${CSS_VAR.swipeStrength}: ${root.swipeStrength}`,
+			root.swipeEasing ? `${CSS_VAR.swipeEasing}: ${root.swipeEasing}` : undefined,
 			root.backdropHeight > 0 ? `${CSS_VAR.height}: ${root.backdropHeight}px` : undefined,
 			root.swiping ? 'transition: none' : undefined
 		),

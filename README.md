@@ -402,19 +402,19 @@ nested root, so dynamic stacks do not need per-level z-index classes.
 
 #### Browser history with SvelteKit
 
-Keep routing outside the drawer by binding `open` to typed shallow state. Push an entry when the
-page opens and navigate back when a user gesture or control closes it.
+Keep typed shallow state as the source of truth for `open`. Push an entry when the page opens and
+navigate back when a user gesture or control closes it.
 
 ```svelte
 <script lang="ts">
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 
-	let open = $derived(page.state.drawerOpen === true);
+	const open = $derived(page.state.drawerOpen === true);
 </script>
 
 <Drawer.Root
-	bind:open
+	{open}
 	onOpenChange={(nextOpen) =>
 		nextOpen ? pushState('', { ...page.state, drawerOpen: true }) : history.back()}
 >

@@ -94,11 +94,11 @@
 	let modalOption = $derived(
 		modalOptions.find((option) => option.value === modal) ?? modalOptions[0]
 	);
-	let activeNavigationPageIndex = $derived(
+	const activeNavigationPageIndex = $derived(
 		page.state.demoDrawerPage ? navigationPages.indexOf(page.state.demoDrawerPage) : -1
 	);
-	let focusPageOpen = $derived(activeNavigationPageIndex >= 0);
-	let projectPageOpen = $derived(activeNavigationPageIndex >= 1);
+	const focusPageOpen = $derived(activeNavigationPageIndex >= 0);
+	const projectPageOpen = $derived(activeNavigationPageIndex >= 1);
 
 	function handleNavigationPageChange(
 		navigationPage: NavigationPage,
@@ -226,7 +226,7 @@
 				</div>
 
 				<Drawer.Root
-					bind:open={focusPageOpen}
+					open={focusPageOpen}
 					swipeDirection="right"
 					swipeBehavior="navigation"
 					onOpenChange={(open, details) => handleNavigationPageChange('focus', open, details)}
@@ -285,7 +285,7 @@
 												</div>
 
 												<Drawer.Root
-													bind:open={projectPageOpen}
+													open={projectPageOpen}
 													swipeDirection="right"
 													swipeBehavior="navigation"
 													onOpenChange={(open, details) =>

@@ -4,14 +4,14 @@
 
 <Drawer.Root defaultOpen>
 	<Drawer.Portal disabled>
-		<Drawer.Viewport>
+		<Drawer.Viewport data-testid="parent-viewport">
 			<Drawer.Popup class="test-popup" data-testid="parent-popup">
 				<Drawer.Title>Parent drawer</Drawer.Title>
 				<Drawer.Description>Contains another drawer.</Drawer.Description>
 
 				<Drawer.Root defaultOpen>
 					<Drawer.Portal disabled>
-						<Drawer.Viewport>
+						<Drawer.Viewport data-testid="child-viewport">
 							<Drawer.Popup class="test-popup child-popup" data-testid="child-popup">
 								<Drawer.Title>Child drawer</Drawer.Title>
 								<Drawer.Description>Exits before releasing its parent.</Drawer.Description>

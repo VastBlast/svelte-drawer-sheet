@@ -96,6 +96,7 @@ function registerSwipeProperties(element: HTMLElement): void {
 export class DrawerRootState<Payload = unknown> {
 	readonly parent: DrawerRootState<unknown> | null;
 	readonly provider: DrawerProviderState | null;
+	readonly nestingDepth: number;
 	readonly actions: DrawerRootActions;
 
 	payload = $state.raw<Payload | undefined>(undefined);
@@ -225,6 +226,7 @@ export class DrawerRootState<Payload = unknown> {
 		this.#options = options;
 		this.parent = options.parent;
 		this.provider = options.provider;
+		this.nestingDepth = (this.parent?.nestingDepth ?? -1) + 1;
 		this.mounted = options.getOpen();
 		// A root constructed already open — a conditionally mounted drawer, or `defaultOpen` —
 		// still enters through its starting styles: the popup's first insertion is the enter
@@ -743,7 +745,9 @@ export class DrawerRootState<Payload = unknown> {
 	}
 
 	#publishProviderVisualState(): void {
-		if (this.parent) return;
+		// Nested roots share their parent's provider by default. Only a deliberately nested
+		// provider scope should drive a separate page-level Indent.
+		if (this.parent && this.provider === this.parent.provider) return;
 		this.provider?.visualState.set(this, {
 			swipeProgress: this.backdropSwipeProgress,
 			frontmostHeight: this.backdropHeight,

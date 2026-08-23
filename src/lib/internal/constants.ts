@@ -16,6 +16,7 @@ export const CSS_VAR = {
 	height: '--drawer-height',
 	frontmostHeight: '--drawer-frontmost-height',
 	nestedDrawers: '--nested-drawers',
+	nestingDepth: '--drawer-nesting-depth',
 	keyboardInset: '--drawer-keyboard-inset'
 } as const;
 

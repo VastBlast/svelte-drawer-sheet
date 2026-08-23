@@ -654,7 +654,7 @@ describe('Drawer', () => {
 		dispatchTouch(popup, 'touchmove', 230, 100);
 		dispatchTouch(popup, 'touchend', 230, 100);
 		expect(indent.style.getPropertyValue('--drawer-swipe-easing')).toMatch(/^cubic-bezier\(/);
-		await expect.element(page.getByRole('dialog')).toBeInTheDocument();
+		await expect.element(page.getByRole('dialog', { name: 'Navigation page' })).toBeInTheDocument();
 	});
 
 	it('clears imperative release styles when reopening interrupts a swipe dismissal', async () => {
@@ -893,6 +893,12 @@ describe('Drawer', () => {
 	it('clears nested ownership while preserving parent height through child exit', async () => {
 		render(NestedDrawerTest);
 		const parent = page.getByTestId('parent-popup');
+		expect(
+			page.getByTestId('parent-viewport').element().style.getPropertyValue('--drawer-nesting-depth')
+		).toBe('0');
+		expect(
+			page.getByTestId('child-viewport').element().style.getPropertyValue('--drawer-nesting-depth')
+		).toBe('1');
 		await expect.element(parent).toHaveAttribute('data-nested-drawer-open');
 		await vi.waitFor(() => {
 			expect(parent.element().style.getPropertyValue('--drawer-height')).toMatch(

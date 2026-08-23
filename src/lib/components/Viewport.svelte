@@ -65,6 +65,7 @@
 		style: mergeStyles(
 			rest.style,
 			`${CSS_VAR.keyboardInset}: ${root.keyboardInset}px`,
+			`${CSS_VAR.nestingDepth}: ${root.nestingDepth}`,
 			// The isolated stacking context guarantees the internal modal blocker layers under the
 			// popup in every engine, including ones where plain `position: fixed` does not isolate.
 			'isolation: isolate'

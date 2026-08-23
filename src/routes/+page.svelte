@@ -44,6 +44,7 @@
 		description: string;
 	}[];
 	const pageViews = ['Today', 'This week'] as const;
+	const projectViews = ['Overview', 'Checklist'] as const;
 	const sessionDays = ['Today', 'Tomorrow', 'Monday'] as const;
 	const sessionLengths = ['25', '30', '45', '60'] as const;
 
@@ -72,6 +73,7 @@
 	let modal = $state<DrawerModal>(true);
 	let pageInteractions = $state(0);
 	let pageView = $state<(typeof pageViews)[number]>(pageViews[0]);
+	let projectView = $state<(typeof projectViews)[number]>(projectViews[0]);
 	let focusMode = $state(true);
 	let sessionDay = $state<(typeof sessionDays)[number]>(sessionDays[0]);
 	let sessionLength = $state<(typeof sessionLengths)[number]>(sessionLengths[1]);
@@ -174,11 +176,11 @@
 
 		<section class="example-section" id="full-screen" aria-labelledby="full-screen-title">
 			<div class="section-heading">
-				<p class="section-index">swipeDirection="right" · nested drawer</p>
+				<p class="section-index">swipeDirection="right" · nested pages + drawer</p>
 				<h2 id="full-screen-title">Full-screen page</h2>
 				<p>
-					Open a page-like drawer, scroll and interact with it, then swipe right or use Back to
-					return.
+					Open two page-like drawers, scroll and interact with them, then swipe right or use Back to
+					unwind the stack.
 				</p>
 			</div>
 
@@ -196,190 +198,370 @@
 					<Drawer.Portal>
 						<Drawer.Backdrop class="scrim scrim--navigation" />
 						<Drawer.Viewport class="sheet-viewport sheet-viewport--right">
-							<Drawer.Popup class="sheet sheet--page">
-								<header class="page-drawer-header">
-									<Drawer.Close class="page-back-button" aria-label="Go back to the examples">
-										<svg viewBox="0 0 20 20" aria-hidden="true">
-											<path d="M12.5 4.5 7 10l5.5 5.5" />
-										</svg>
-										<span>Back</span>
-									</Drawer.Close>
-									<Drawer.Title level={1} class="page-drawer-title">Focus</Drawer.Title>
-									<span class="page-header-balance" aria-hidden="true"></span>
-								</header>
+							<Drawer.Provider>
+								<Drawer.Indent class="navigation-page-underlay">
+									<Drawer.Popup class="sheet sheet--page">
+										<header class="page-drawer-header">
+											<Drawer.Close class="page-back-button" aria-label="Go back to the examples">
+												<svg viewBox="0 0 20 20" aria-hidden="true">
+													<path d="M12.5 4.5 7 10l5.5 5.5" />
+												</svg>
+												<span>Back</span>
+											</Drawer.Close>
+											<Drawer.Title level={1} class="page-drawer-title">Focus</Drawer.Title>
+											<span class="page-header-balance" aria-hidden="true"></span>
+										</header>
 
-								<Drawer.Content class="page-drawer-body">
-									<div class="page-drawer-inner">
-										<section class="page-hero">
-											<p class="page-kicker">Your workspace</p>
-											<h2>Make room for the work that matters.</h2>
-											<Drawer.Description>
-												A focused view for planning the day, tracking progress, and protecting quiet
-												time.
-											</Drawer.Description>
-										</section>
+										<Drawer.Content class="page-drawer-body">
+											<div class="page-drawer-inner">
+												<section class="page-hero">
+													<p class="page-kicker">Your workspace</p>
+													<h2>Make room for the work that matters.</h2>
+													<Drawer.Description>
+														A focused view for planning the day, tracking progress, and protecting
+														quiet time.
+													</Drawer.Description>
+												</section>
 
-										<div class="page-view-switcher" aria-label="Planning period">
-											{#each pageViews as view (view)}
-												<button
-													type="button"
-													class={['page-view-button', { active: pageView === view }]}
-													aria-pressed={pageView === view}
-													onclick={() => (pageView = view)}
-												>
-													{view}
-												</button>
-											{/each}
-										</div>
-
-										<div class="page-stat-grid" aria-live="polite">
-											<div>
-												<span>Completed</span>
-												<strong>{pageView === 'Today' ? '3' : '14'}</strong>
-											</div>
-											<div>
-												<span>Focus time</span>
-												<strong>{pageView === 'Today' ? '1h 45m' : '6h 20m'}</strong>
-											</div>
-										</div>
-
-										<section class="page-card" aria-labelledby="priority-title">
-											<div class="page-card-heading">
-												<div>
-													<p>Up next</p>
-													<h3 id="priority-title">Today’s priorities</h3>
+												<div class="page-view-switcher" aria-label="Planning period">
+													{#each pageViews as view (view)}
+														<button
+															type="button"
+															class={['page-view-button', { active: pageView === view }]}
+															aria-pressed={pageView === view}
+															onclick={() => (pageView = view)}
+														>
+															{view}
+														</button>
+													{/each}
 												</div>
-												<span>2 of 4</span>
-											</div>
-											<div class="page-task-list">
-												<label><input type="checkbox" checked /> Shape the release notes</label>
-												<label><input type="checkbox" checked /> Review accessibility checks</label>
-												<label><input type="checkbox" /> Refine gesture examples</label>
-												<label><input type="checkbox" /> Prepare the next milestone</label>
-											</div>
-										</section>
 
-										<label class="page-switch-row">
-											<span>
-												<strong>Focus mode</strong>
-												<small
-													>{focusMode
-														? 'Notifications are muted'
-														: 'Notifications are allowed'}</small
-												>
-											</span>
-											<input type="checkbox" role="switch" bind:checked={focusMode} />
-										</label>
-
-										<Drawer.Root>
-											<section class="page-card page-planner" aria-labelledby="planner-title">
-												<div>
-													<p>Focus block</p>
-													<h3 id="planner-title">Protect time on your calendar</h3>
-													<span>{savedPlan}</span>
+												<div class="page-stat-grid" aria-live="polite">
+													<div>
+														<span>Completed</span>
+														<strong>{pageView === 'Today' ? '3' : '14'}</strong>
+													</div>
+													<div>
+														<span>Focus time</span>
+														<strong>{pageView === 'Today' ? '1h 45m' : '6h 20m'}</strong>
+													</div>
 												</div>
-												<Drawer.Trigger class="button button--primary">Schedule</Drawer.Trigger>
-											</section>
 
-											<Drawer.Portal>
-												<Drawer.Viewport
-													class="sheet-viewport sheet-viewport--down sheet-viewport--nested-page"
-												>
-													<Drawer.Popup class="sheet sheet--page-planner">
-														<div class="drag-region planner-drag-region">
-															<div class="grabber" aria-hidden="true"></div>
-															<div class="sheet-header">
-																<div>
-																	<Drawer.Title>Schedule focus time</Drawer.Title>
-																	<Drawer.Description>
-																		Choose when you want notifications and meetings held back.
-																	</Drawer.Description>
-																</div>
-																<Drawer.Close class="icon-button" aria-label="Close schedule drawer"
-																	>×</Drawer.Close
-																>
-															</div>
+												<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
+													<section
+														class="page-card page-navigation-card"
+														aria-labelledby="project-page-title"
+													>
+														<div>
+															<p>Nested navigation</p>
+															<h3 id="project-page-title">Release readiness</h3>
+															<span>Open another full-screen page from this one.</span>
 														</div>
+														<Drawer.Trigger class="button button--primary"
+															>Open project</Drawer.Trigger
+														>
+													</section>
 
-														<Drawer.Content class="sheet-body page-planner-body">
-															<fieldset class="page-choice-group">
-																<legend>Day</legend>
-																<div>
-																	{#each sessionDays as day (day)}
-																		<label>
-																			<input
-																				type="radio"
-																				name="focus-day"
-																				value={day}
-																				bind:group={sessionDay}
-																			/>
-																			<span>{day}</span>
-																		</label>
-																	{/each}
-																</div>
-															</fieldset>
+													<Drawer.Portal>
+														<Drawer.Viewport class="sheet-viewport sheet-viewport--right">
+															<Drawer.Provider>
+																<Drawer.Indent class="navigation-page-underlay">
+																	<Drawer.Popup class="sheet sheet--page">
+																		<header class="page-drawer-header">
+																			<Drawer.Close
+																				class="page-back-button"
+																				aria-label="Go back to Focus"
+																			>
+																				<svg viewBox="0 0 20 20" aria-hidden="true">
+																					<path d="M12.5 4.5 7 10l5.5 5.5" />
+																				</svg>
+																				<span>Focus</span>
+																			</Drawer.Close>
+																			<Drawer.Title level={1} class="page-drawer-title"
+																				>Project</Drawer.Title
+																			>
+																			<span class="page-header-balance" aria-hidden="true"></span>
+																		</header>
 
-															<label class="field">
-																<span>Start time</span>
-																<input type="time" bind:value={sessionTime} />
-															</label>
+																		<Drawer.Content class="page-drawer-body">
+																			<div class="page-drawer-inner">
+																				<section class="page-hero">
+																					<p class="page-kicker">Nested page · level two</p>
+																					<h2>Ship the interaction with confidence.</h2>
+																					<Drawer.Description>
+																						This screen has its own navigation, scrolling, and
+																						controls. Swipe right anywhere to return to Focus.
+																					</Drawer.Description>
+																				</section>
 
-															<fieldset class="page-duration-group">
-																<legend>Duration</legend>
-																<div>
-																	{#each sessionLengths as minutes (minutes)}
-																		<button
-																			type="button"
-																			class={{ active: sessionLength === minutes }}
-																			aria-pressed={sessionLength === minutes}
-																			onclick={() => (sessionLength = minutes)}
+																				<div
+																					class="page-view-switcher"
+																					aria-label="Project section"
+																				>
+																					{#each projectViews as view (view)}
+																						<button
+																							type="button"
+																							class={[
+																								'page-view-button',
+																								{ active: projectView === view }
+																							]}
+																							aria-pressed={projectView === view}
+																							onclick={() => (projectView = view)}
+																						>
+																							{view}
+																						</button>
+																					{/each}
+																				</div>
+
+																				<div class="page-stat-grid" aria-live="polite">
+																					<div>
+																						<span>Ready</span>
+																						<strong
+																							>{projectView === 'Overview'
+																								? '82%'
+																								: '4 / 6'}</strong
+																						>
+																					</div>
+																					<div>
+																						<span>Open items</span>
+																						<strong
+																							>{projectView === 'Overview' ? '2' : '2 left'}</strong
+																						>
+																					</div>
+																				</div>
+
+																				<section
+																					class="page-card"
+																					aria-labelledby="release-checklist-title"
+																				>
+																					<div class="page-card-heading">
+																						<div>
+																							<p>Before launch</p>
+																							<h3 id="release-checklist-title">
+																								Release checklist
+																							</h3>
+																						</div>
+																						<span>4 of 6</span>
+																					</div>
+																					<div class="page-task-list">
+																						<label
+																							><input type="checkbox" checked /> Keyboard dismissal</label
+																						>
+																						<label
+																							><input type="checkbox" checked /> Reduced motion</label
+																						>
+																						<label
+																							><input type="checkbox" checked /> Nested bottom drawer</label
+																						>
+																						<label
+																							><input type="checkbox" checked /> Full-screen swipe back</label
+																						>
+																						<label
+																							><input type="checkbox" /> Physical iPhone pass</label
+																						>
+																						<label
+																							><input type="checkbox" /> Low Power Mode pass</label
+																						>
+																					</div>
+																				</section>
+
+																				<label class="field page-note-card">
+																					<span>Review notes</span>
+																					<textarea
+																						placeholder="Capture anything you notice while testing"
+																					></textarea>
+																				</label>
+
+																				<section
+																					class="page-activity"
+																					aria-labelledby="project-activity-title"
+																				>
+																					<div class="page-card-heading">
+																						<div>
+																							<p>History</p>
+																							<h3 id="project-activity-title">Project activity</h3>
+																						</div>
+																					</div>
+																					<ul>
+																						<li>
+																							<span aria-hidden="true"></span>
+																							<div>
+																								<strong>Motion tuned</strong><small
+																									>Today · 10:42 AM</small
+																								>
+																							</div>
+																						</li>
+																						<li>
+																							<span aria-hidden="true"></span>
+																							<div>
+																								<strong>Gesture coverage</strong><small
+																									>Today · 9:15 AM</small
+																								>
+																							</div>
+																						</li>
+																						<li>
+																							<span aria-hidden="true"></span>
+																							<div>
+																								<strong>Accessibility review</strong><small
+																									>Yesterday</small
+																								>
+																							</div>
+																						</li>
+																					</ul>
+																				</section>
+																			</div>
+																		</Drawer.Content>
+																	</Drawer.Popup>
+																</Drawer.Indent>
+															</Drawer.Provider>
+														</Drawer.Viewport>
+													</Drawer.Portal>
+												</Drawer.Root>
+
+												<section class="page-card" aria-labelledby="priority-title">
+													<div class="page-card-heading">
+														<div>
+															<p>Up next</p>
+															<h3 id="priority-title">Today’s priorities</h3>
+														</div>
+														<span>2 of 4</span>
+													</div>
+													<div class="page-task-list">
+														<label><input type="checkbox" checked /> Shape the release notes</label>
+														<label
+															><input type="checkbox" checked /> Review accessibility checks</label
+														>
+														<label><input type="checkbox" /> Refine gesture examples</label>
+														<label><input type="checkbox" /> Prepare the next milestone</label>
+													</div>
+												</section>
+
+												<label class="page-switch-row">
+													<span>
+														<strong>Focus mode</strong>
+														<small
+															>{focusMode
+																? 'Notifications are muted'
+																: 'Notifications are allowed'}</small
+														>
+													</span>
+													<input type="checkbox" role="switch" bind:checked={focusMode} />
+												</label>
+
+												<Drawer.Root>
+													<section class="page-card page-planner" aria-labelledby="planner-title">
+														<div>
+															<p>Focus block</p>
+															<h3 id="planner-title">Protect time on your calendar</h3>
+															<span>{savedPlan}</span>
+														</div>
+														<Drawer.Trigger class="button button--primary">Schedule</Drawer.Trigger>
+													</section>
+
+													<Drawer.Portal>
+														<Drawer.Viewport class="sheet-viewport sheet-viewport--down">
+															<Drawer.Popup class="sheet sheet--page-planner">
+																<div class="drag-region planner-drag-region">
+																	<div class="grabber" aria-hidden="true"></div>
+																	<div class="sheet-header">
+																		<div>
+																			<Drawer.Title>Schedule focus time</Drawer.Title>
+																			<Drawer.Description>
+																				Choose when you want notifications and meetings held back.
+																			</Drawer.Description>
+																		</div>
+																		<Drawer.Close
+																			class="icon-button"
+																			aria-label="Close schedule drawer">×</Drawer.Close
 																		>
-																			{minutes} min
-																		</button>
-																	{/each}
+																	</div>
 																</div>
-															</fieldset>
 
-															<div class="sheet-actions">
-																<Drawer.Close
-																	class="button button--primary page-save-button"
-																	onclick={() =>
-																		(savedPlan = `${sessionDay} at ${sessionTime} · ${sessionLength} min`)}
-																>
-																	Save focus block
-																</Drawer.Close>
+																<Drawer.Content class="sheet-body page-planner-body">
+																	<fieldset class="page-choice-group">
+																		<legend>Day</legend>
+																		<div>
+																			{#each sessionDays as day (day)}
+																				<label>
+																					<input
+																						type="radio"
+																						name="focus-day"
+																						value={day}
+																						bind:group={sessionDay}
+																					/>
+																					<span>{day}</span>
+																				</label>
+																			{/each}
+																		</div>
+																	</fieldset>
+
+																	<label class="field">
+																		<span>Start time</span>
+																		<input type="time" bind:value={sessionTime} />
+																	</label>
+
+																	<fieldset class="page-duration-group">
+																		<legend>Duration</legend>
+																		<div>
+																			{#each sessionLengths as minutes (minutes)}
+																				<button
+																					type="button"
+																					class={{ active: sessionLength === minutes }}
+																					aria-pressed={sessionLength === minutes}
+																					onclick={() => (sessionLength = minutes)}
+																				>
+																					{minutes} min
+																				</button>
+																			{/each}
+																		</div>
+																	</fieldset>
+
+																	<div class="sheet-actions">
+																		<Drawer.Close
+																			class="button button--primary page-save-button"
+																			onclick={() =>
+																				(savedPlan = `${sessionDay} at ${sessionTime} · ${sessionLength} min`)}
+																		>
+																			Save focus block
+																		</Drawer.Close>
+																	</div>
+																</Drawer.Content>
+															</Drawer.Popup>
+														</Drawer.Viewport>
+													</Drawer.Portal>
+												</Drawer.Root>
+
+												<section class="page-activity" aria-labelledby="activity-title">
+													<div class="page-card-heading">
+														<div>
+															<p>Overview</p>
+															<h3 id="activity-title">Recent activity</h3>
+														</div>
+													</div>
+													<ul>
+														<li>
+															<span aria-hidden="true"></span>
+															<div>
+																<strong>Deep work</strong><small>45 minutes · 8:30 AM</small>
 															</div>
-														</Drawer.Content>
-													</Drawer.Popup>
-												</Drawer.Viewport>
-											</Drawer.Portal>
-										</Drawer.Root>
-
-										<section class="page-activity" aria-labelledby="activity-title">
-											<div class="page-card-heading">
-												<div>
-													<p>Overview</p>
-													<h3 id="activity-title">Recent activity</h3>
-												</div>
+														</li>
+														<li>
+															<span aria-hidden="true"></span>
+															<div>
+																<strong>Planning</strong><small>20 minutes · Yesterday</small>
+															</div>
+														</li>
+														<li>
+															<span aria-hidden="true"></span>
+															<div><strong>Review</strong><small>30 minutes · Thursday</small></div>
+														</li>
+													</ul>
+												</section>
 											</div>
-											<ul>
-												<li>
-													<span aria-hidden="true"></span>
-													<div><strong>Deep work</strong><small>45 minutes · 8:30 AM</small></div>
-												</li>
-												<li>
-													<span aria-hidden="true"></span>
-													<div><strong>Planning</strong><small>20 minutes · Yesterday</small></div>
-												</li>
-												<li>
-													<span aria-hidden="true"></span>
-													<div><strong>Review</strong><small>30 minutes · Thursday</small></div>
-												</li>
-											</ul>
-										</section>
-									</div>
-								</Drawer.Content>
-							</Drawer.Popup>
+										</Drawer.Content>
+									</Drawer.Popup>
+								</Drawer.Indent>
+							</Drawer.Provider>
 						</Drawer.Viewport>
 					</Drawer.Portal>
 				</Drawer.Root>

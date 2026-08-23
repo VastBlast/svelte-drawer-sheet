@@ -354,9 +354,32 @@ continuity when the finger releases.
 }
 ```
 
-For a page-stack transition, put the page and navigation root in a `Provider`, wrap the page with
-`Indent`, and use the same timing properties on both layers. `Indent` receives dismissal progress
-and settle state without changing presentation on its own.
+For a page-stack transition, wrap each page's `Popup` in a `Provider` and `Indent`. A nested
+navigation root inside that popup drives the underlay. Use the same timing properties on both
+layers. `Indent` receives dismissal progress and settle state without changing presentation on its
+own.
+
+Give each full-screen page its own `Provider` and `Indent` around that page's `Popup`. A nested
+navigation root then drives only the page immediately beneath it. Repeat the same structure at every
+level for an arbitrarily deep stack. Scope the page-stack CSS to
+`[data-swipe-behavior='navigation']`; bottom drawers keep their normal behavior even inside the same
+provider scope.
+
+```svelte
+<Drawer.Root swipeDirection="right" swipeBehavior="navigation">
+	<Drawer.Portal>
+		<Drawer.Viewport>
+			<Drawer.Provider>
+				<Drawer.Indent class="navigation-underlay">
+					<Drawer.Popup class="navigation-popup">
+						<!-- A nested navigation Root here drives this Indent. -->
+					</Drawer.Popup>
+				</Drawer.Indent>
+			</Drawer.Provider>
+		</Drawer.Viewport>
+	</Drawer.Portal>
+</Drawer.Root>
+```
 
 ```css
 .navigation-underlay[data-active][data-swipe-behavior='navigation'] {
@@ -368,7 +391,14 @@ and settle state without changing presentation on its own.
 .navigation-underlay[data-swiping] {
 	transition: none;
 }
+
+.drawer-viewport {
+	z-index: calc(100 + var(--drawer-nesting-depth, 0));
+}
 ```
+
+`Viewport` sets `--drawer-nesting-depth` to `0` for a top-level root and increments it for every
+nested root, so dynamic stacks do not need per-level z-index classes.
 
 ## Portals and presence
 
@@ -499,6 +529,7 @@ These attributes and variables are the stable style API. Do not use other implem
 | `--drawer-height`            | `Popup`, `Backdrop`, `Indent` | `auto` at rest. Height in pixels during nesting or exit.                         |
 | `--drawer-frontmost-height`  | `Popup`                       | Height of the frontmost nested drawer                                            |
 | `--nested-drawers`           | `Popup`                       | Number of open nested drawers                                                    |
+| `--drawer-nesting-depth`     | `Viewport`                    | Zero-based root depth for dynamic visual layering                                |
 | `--drawer-keyboard-inset`    | `Viewport`                    | Visual viewport inset when a software keyboard is visible                        |
 
 `Popup[data-swipe-direction]` gives the root direction to CSS.

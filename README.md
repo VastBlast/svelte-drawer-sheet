@@ -600,6 +600,12 @@ pnpm validate
 
 `pnpm package` creates `dist`. `pnpm pack --dry-run` lists the files in the npm package.
 
+### Demo deployment
+
+Connect this repository to a Cloudflare Worker named `svelte-drawer-sheet`. Use `pnpm build:site`
+as the build command and keep the default `npx wrangler deploy` deploy command. The Worker serves
+the prerendered `build` directory as static assets; no Wrangler dependency is required.
+
 ## License
 
 The package uses the MIT License. Read [LICENSE](./LICENSE) and

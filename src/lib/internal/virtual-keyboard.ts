@@ -129,6 +129,9 @@ export function resolveKeyboardScroll({
 	const visibleTop = Math.max(scrollerTop, keyboardTop) + VISIBILITY_MARGIN;
 	const visibleBottom = Math.min(scrollerBottom, keyboardBottom) - VISIBILITY_MARGIN;
 	if (visibleBottom <= visibleTop || maxScrollTop <= 0) return { overlap, destination: null };
+	// A control already in view stays where the reader is looking at it.
+	if (targetTop >= visibleTop && targetBottom <= visibleBottom)
+		return { overlap, destination: null };
 
 	const destination = scrollTop + (targetTop + targetBottom - visibleTop - visibleBottom) / 2;
 	return {
@@ -343,6 +346,12 @@ export function attachVirtualKeyboard(
 	let trackedDestination = 0;
 	let settleChecks = 0;
 	let observedScrollTop = -1;
+	let restingScroller: {
+		readonly element: HTMLElement;
+		readonly top: number;
+		readonly bottom: number;
+		readonly checks: number;
+	} | null = null;
 	const rejectedScrollers = new Set<HTMLElement>();
 	let programmaticFocus = false;
 	let touchStart: (Point & { readonly identifier: number }) | null = null;
@@ -362,6 +371,20 @@ export function attachVirtualKeyboard(
 		trackedDestination = 0;
 		settleChecks = 0;
 		observedScrollTop = -1;
+		restingScroller = null;
+	}
+
+	/** Whether the scroller measures as it did on the previous frame; one that keeps moving is taken as is. */
+	function scrollerAtRest(element: HTMLElement, rect: DOMRect): boolean {
+		const previous = restingScroller?.element === element ? restingScroller : null;
+		const checks = (previous?.checks ?? 0) + 1;
+		restingScroller = { element, top: rect.top, bottom: rect.bottom, checks };
+		return (
+			(previous !== null &&
+				Math.abs(previous.top - rect.top) <= 0.5 &&
+				Math.abs(previous.bottom - rect.bottom) <= 0.5) ||
+			checks > SETTLE_FRAME_LIMIT
+		);
 	}
 
 	function restoreAdjustment(): boolean {
@@ -532,6 +555,7 @@ export function attachVirtualKeyboard(
 			// without provider-owned padding, so that padding can never become new keyboard overlap.
 			restoreAdjustment();
 			rejectedScrollers.clear();
+			resetScrollTracking();
 			root.keyboardInset = keyboardInset;
 			viewport.style.setProperty(CSS_VAR.keyboardInset, keyboardInsetValue);
 			// The inset can resize the popup. Measure the resulting geometry on the next frame.
@@ -554,6 +578,13 @@ export function attachVirtualKeyboard(
 			return;
 		}
 		const scrollerRect = scroller.getBoundingClientRect();
+		// Consumers lift the popup over the keyboard with a transition (the documented pattern
+		// animates its padding), so the scroller may still be on its way. Overlap measured in
+		// flight would add slack padding the resting scroller does not need, and keep it.
+		if (!adjustment && !scrollerAtRest(scroller, scrollerRect)) {
+			requestAlignmentFrame();
+			return;
+		}
 		const targetRect = target.getBoundingClientRect();
 		const scrollTop = scroller.scrollTop;
 		const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);

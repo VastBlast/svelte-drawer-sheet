@@ -91,6 +91,21 @@ describe('resolveKeyboardScroll', () => {
 		).toEqual({ overlap: 200, destination: 330 });
 	});
 
+	it('leaves a target that is already visible where it is', () => {
+		expect(
+			resolveKeyboardScroll({
+				keyboardTop: 20,
+				keyboardBottom: 500,
+				scrollerTop: 80,
+				scrollerBottom: 700,
+				targetTop: 200,
+				targetBottom: 240,
+				scrollTop: 100,
+				maxScrollTop: 600
+			})
+		).toEqual({ overlap: 200, destination: null });
+	});
+
 	it('clamps the destination and handles unusable visible bands', () => {
 		const geometry = {
 			keyboardTop: 0,

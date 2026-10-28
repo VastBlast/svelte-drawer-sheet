@@ -2,6 +2,7 @@
 
 node_modules/
 .svelte-kit/
+.vitest/
 dist/
 build/
 .env

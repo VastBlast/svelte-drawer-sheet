@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import * as Drawer from '$lib';
+	import * as Drawer from '#lib';
 
 	let { children }: { children: Snippet } = $props();
 </script>

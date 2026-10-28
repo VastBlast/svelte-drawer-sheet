@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Drawer from '$lib';
+	import * as Drawer from '#lib';
 	import type {
 		DrawerChangeEventDetails,
 		DrawerModal,
 		DrawerSnapPoint,
 		DrawerSwipeDirection
-	} from '$lib';
+	} from '#lib';
 	import './demo.css';
 
 	const snapPoints = ['24rem', 0.7, 1] as const satisfies readonly DrawerSnapPoint[];

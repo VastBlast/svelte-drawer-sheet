@@ -14,7 +14,8 @@ export default defineConfig({
 					name: 'browser',
 					browser: {
 						enabled: true,
-						provider: playwright(),
+						// Firefox exposes TouchEvent only when touch support is enabled.
+						provider: playwright({ contextOptions: { hasTouch: true } }),
 						instances: (process.env.CI
 							? (['chromium', 'firefox', 'webkit'] as const)
 							: (['chromium'] as const)

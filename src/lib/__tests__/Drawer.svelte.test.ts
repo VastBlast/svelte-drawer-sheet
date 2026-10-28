@@ -28,7 +28,7 @@ describe('Drawer', () => {
 	}
 
 	function dispatchTouch(
-		target: HTMLElement,
+		target: Element,
 		type: 'touchstart' | 'touchmove' | 'touchend',
 		x: number,
 		y: number
@@ -712,6 +712,17 @@ describe('Drawer', () => {
 		dispatchTouch(content, 'touchend', 20, 180);
 		await expect.element(page.getByRole('dialog')).toBeInTheDocument();
 
+		// A drawing in the content scrolls with it, as its text does.
+		const shape = page.getByTestId('icon').element().querySelector('rect');
+		if (!shape) throw new TypeError('Expected an SVG shape');
+		dispatchTouch(shape, 'touchstart', 20, 100);
+		dispatchTouch(shape, 'touchmove', 20, 180);
+		dispatchTouch(shape, 'touchmove', 20, 260);
+		expect(
+			page.getByTestId('popup').element().style.getPropertyValue('--drawer-swipe-movement-y')
+		).toBe('0px');
+		dispatchTouch(shape, 'touchend', 20, 260);
+
 		content.scrollTop = 0;
 		dispatchTouch(content, 'touchstart', 20, 100);
 		dispatchTouch(content, 'touchmove', 20, 180);
@@ -722,6 +733,54 @@ describe('Drawer', () => {
 		dispatchTouch(content, 'touchend', 20, 400);
 		await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
 		await expect.element(page.getByTestId('reason')).toHaveTextContent('swipe');
+	});
+
+	it('leaves a drag on a swipe handle to the drawer wherever the content is scrolled to', async () => {
+		render(DrawerTest, {
+			defaultOpen: true,
+			scrollableContent: true,
+			withSnapPoints: false
+		});
+		const content = page.getByTestId('content').element();
+		const pinned = page.getByTestId('pinned').element();
+		if (!(content instanceof HTMLElement) || !(pinned instanceof HTMLElement)) {
+			throw new TypeError('Expected HTML drawer content');
+		}
+		await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+		content.scrollTop = 80;
+		expect(content.scrollTop).toBe(80);
+
+		// Scrolled away from its top, the content could take this drag, but not from a handle.
+		dispatchTouch(pinned, 'touchstart', 20, 100);
+		dispatchTouch(pinned, 'touchmove', 20, 180);
+		dispatchTouch(pinned, 'touchmove', 20, 400);
+		dispatchTouch(pinned, 'touchend', 20, 400);
+		await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+		await expect.element(page.getByTestId('reason')).toHaveTextContent('swipe');
+
+		// A mouse drag in the content is left to it, but one on a handle inside it is the drawer's.
+		const trigger = page.getByTestId('trigger').element();
+		if (!(trigger instanceof HTMLElement)) throw new TypeError('Expected an HTML trigger');
+		trigger.click();
+		await expect.element(page.getByRole('dialog')).toBeInTheDocument();
+		const handle = page.getByTestId('pinned').element();
+		const pointer = (type: string, clientY: number, buttons: number) =>
+			handle.dispatchEvent(
+				new PointerEvent(type, {
+					bubbles: true,
+					cancelable: true,
+					button: 0,
+					buttons,
+					clientY,
+					isPrimary: true,
+					pointerId: 43,
+					pointerType: 'mouse'
+				})
+			);
+		pointer('pointerdown', 20, 1);
+		pointer('pointermove', 260, 1);
+		pointer('pointerup', 260, 0);
+		await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
 	});
 
 	it('keeps both touch gesture sessions identifier-safe and cancels them on multitouch', async () => {

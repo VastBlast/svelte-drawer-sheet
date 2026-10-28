@@ -3,6 +3,7 @@ import type { DrawerSwipeDirection } from '../types.js';
 export const ATTR = {
 	content: 'data-drawer-content',
 	swipeIgnore: 'data-drawer-swipe-ignore',
+	swipeHandle: 'data-drawer-swipe-handle',
 	baseSwipeIgnore: 'data-base-ui-swipe-ignore'
 } as const;
 

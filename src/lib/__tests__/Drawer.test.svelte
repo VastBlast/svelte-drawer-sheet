@@ -122,6 +122,16 @@
 					style={scrollableContent ? 'height: 100px; overflow-y: auto;' : undefined}
 				>
 					<div style:height={scrollableContent ? '500px' : undefined}>
+						{#if scrollableContent}
+							<div
+								data-testid="pinned"
+								data-drawer-swipe-handle
+								style="position: sticky; top: 0; height: 20px;"
+							></div>
+							<svg data-testid="icon" width="20" height="20" aria-hidden="true">
+								<rect width="20" height="20" />
+							</svg>
+						{/if}
 						<label>
 							Display name
 							<input value="Ada" />

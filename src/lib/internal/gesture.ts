@@ -31,6 +31,7 @@ const MIN_SWIPE = 10;
 const FAST_SWIPE_VELOCITY = 0.5;
 const IGNORE_POINTER_SELECTOR = `[${ATTR.swipeIgnore}],[${ATTR.baseSwipeIgnore}],button,a,input,select,textarea,label,[role="button"]`;
 const IGNORE_TOUCH_SELECTOR = `[${ATTR.swipeIgnore}],[${ATTR.baseSwipeIgnore}]`;
+const CONTENT_OR_HANDLE_SELECTOR = `[${ATTR.content}],[${ATTR.swipeHandle}]`;
 
 interface GestureSession {
 	readonly source: 'pointer' | 'touch';
@@ -60,22 +61,30 @@ function axisFor(direction: DrawerSwipeDirection): 'horizontal' | 'vertical' {
 	return isVertical(direction) ? 'vertical' : 'horizontal';
 }
 
+/**
+ * The scroll container a touch on `target` scrolls along `axis`, walking outward from whatever was
+ * touched, an SVG drawing included. A swipe handle met first means none: the drag is the drawer's
+ * wherever the content is scrolled to.
+ */
 function findScrollable(
 	target: EventTarget | null,
 	root: HTMLElement,
 	axis: 'horizontal' | 'vertical'
 ): HTMLElement | null {
-	let element = isHTMLElement(target) ? target : null;
+	let element = isElement(target) ? target : null;
 	while (element) {
+		if (element.hasAttribute(ATTR.swipeHandle)) return null;
 		const style = element.ownerDocument.defaultView?.getComputedStyle(element);
 		const overflow = axis === 'vertical' ? style?.overflowY : style?.overflowX;
 		const overflows =
 			axis === 'vertical'
 				? element.scrollHeight > element.clientHeight
 				: element.scrollWidth > element.clientWidth;
-		if ((overflow === 'auto' || overflow === 'scroll') && overflows) return element;
+		if (isHTMLElement(element) && (overflow === 'auto' || overflow === 'scroll') && overflows) {
+			return element;
+		}
 		if (element === root) break;
-		element = composedParent(element) as HTMLElement | null;
+		element = composedParent(element);
 	}
 	return null;
 }
@@ -108,6 +117,15 @@ function canNativeScroll(
 function hasProtectedSelection(root: HTMLElement): boolean {
 	const selection = root.ownerDocument.getSelection?.();
 	return Boolean(selection && !selection.isCollapsed && root.contains(selection.anchorNode));
+}
+
+/** Whether the target is in the content rather than in a swipe handle inside it: the nearer one decides. */
+function inContent(path: readonly Element[]): boolean {
+	return (
+		path
+			.find((element) => element.matches(CONTENT_OR_HANDLE_SELECTOR))
+			?.hasAttribute(ATTR.content) ?? false
+	);
 }
 
 function eventPathElements(event: Event): Element[] {
@@ -157,7 +175,7 @@ export function attachDismissGesture(
 		if (source === 'pointer') {
 			if (
 				pathMatches(path, IGNORE_POINTER_SELECTOR) ||
-				(behavior === 'drawer' && pathMatches(path, `[${ATTR.content}]`))
+				(behavior === 'drawer' && inContent(path))
 			) {
 				return;
 			}

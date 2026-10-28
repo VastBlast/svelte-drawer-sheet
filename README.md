@@ -321,7 +321,11 @@ parts.
 ```
 
 Add `data-drawer-swipe-ignore` to a region that must keep native gestures. `Content` identifies the
-scroll region. A drawer gesture starts only when the content reaches its scroll boundary.
+scroll region. A drawer gesture starts only when the content reaches its scroll boundary. Add
+`data-drawer-swipe-handle` to a region inside the content that drags the drawer wherever the content
+is scrolled to, such as a header pinned at its top; give it `touch-action: pan-x pinch-zoom`
+(`pan-y pinch-zoom` for a horizontal drawer) too, so the browser never starts a scroll of its own
+from it.
 
 ### Navigation swipe behavior
 
